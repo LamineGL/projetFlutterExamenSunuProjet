@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "679762706170",
+    "project_id": "sunprojetl3gl",
+    "storage_bucket": "sunprojetl3gl.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:679762706170:android:e31790d8c68b2ff4759343",
+        "android_client_info": {
+          "package_name": "com.example.sunuprojetl3gl"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTmfcK-RT3qYT1V08MDRq8mOhlByPqybg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
