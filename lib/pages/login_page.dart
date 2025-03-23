@@ -13,79 +13,258 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
 
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+
+  bool _isLoading = false;
+  bool _isLogin = true;
+
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: const Text("Login page"),
+        backgroundColor: Colors.blue.shade700,
+        title: Text(_isLogin ? "Connexion" : "Inscription"),
+        leading: _isLogin
+            ? null
+            : IconButton(
+          // Affichage du bouton retour uniquement en mode inscription
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            setState(() {
+              _isLogin = true; // Retour au mode connexion
+            });
+          },
+        ),
       ),
-      body: Padding(
+      body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
-        // Ajout du Form pour que la validation fonctionne
         child: Form(
           key: _formKey,
           child: Column(
             children: [
+              const SizedBox(height: 30),
+
+              // Titre de la page
+              Text(
+                _isLogin ? "Connectez-vous pour continuer" : "Créer un compte",
+                style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.blueGrey.shade900),
+              ),
+              Text(
+                _isLogin
+                    ? "Rejoignez SunuProjet pour gérer vos projets"
+                    : "Rejoignez SunuProjet pour démarrer",
+                style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+              ),
+              const SizedBox(height: 30),
+
+              // Champ Nom (visible en mode inscription)
+              if (!_isLogin)
+                Column(
+                  children: [
+                    TextFormField(
+                      controller: _nameController,
+                      decoration: const InputDecoration(
+                        prefixIcon: Icon(Icons.person),
+                        labelText: "Nom complet",
+                        border: OutlineInputBorder(),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Le nom est requis";
+                        }
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                  ],
+                ),
+
+              // Champ Email
               TextFormField(
-                // Associez le controller pour récupérer la valeur du champ
                 controller: _emailController,
                 decoration: const InputDecoration(
                   prefixIcon: Icon(Icons.email),
-                  labelText: "Email",
+                  labelText: "Adresse Email",
                   border: OutlineInputBorder(),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Email is required';
+                    return "L'email est requis";
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 20),
+
+              // Champ Mot de passe avec bouton "voir/masquer"
               TextFormField(
-                // Associez le controller pour récupérer la valeur du champ
                 controller: _passwordController,
-                decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.lock),
-                  labelText: "Password",
-                  border: OutlineInputBorder(),
+                obscureText: _obscurePassword,
+                decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.lock),
+                  labelText: "Mot de Passe",
+                  border: const OutlineInputBorder(),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility),
+                    onPressed: () {
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Password is required';
+                    return "Le mot de passe est requis";
                   }
                   return null;
                 },
               ),
+
+              if (!_isLogin)
+                Column(
+                  children: [
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _confirmPasswordController,
+                      obscureText: _obscureConfirmPassword,
+                      decoration: InputDecoration(
+                        prefixIcon: const Icon(Icons.lock),
+                        labelText: "Confirmer le Mot de Passe",
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(_obscureConfirmPassword
+                              ? Icons.visibility_off
+                              : Icons.visibility),
+                          onPressed: () {
+                            setState(() {
+                              _obscureConfirmPassword = !_obscureConfirmPassword;
+                            });
+                          },
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return "Veuillez confirmer le mot de passe";
+                        }
+                        if (value != _passwordController.text) {
+                          return "Les mots de passe ne correspondent pas";
+                        }
+                        return null;
+                      },
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 30),
+
+              // Lien "Mot de passe oublié ?"
+              if (_isLogin)
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: TextButton(
+                    onPressed: () {
+                      // Implémenter la récupération de mot de passe
+                    },
+                    child: const Text("Mot de passe oublié ?"),
+                  ),
+                ),
+
+              const SizedBox(height: 30),
+
+              // Bouton Connexion / Inscription
               Container(
-                margin: const EdgeInsets.only(top: 30),
                 width: double.infinity,
                 child: ElevatedButton(
-                  onPressed: () async {
-
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
                     if (_formKey.currentState!.validate()) {
+                      setState(() {
+                        _isLoading = true;
+                      });
+
                       try {
-                        await Auth().loginWithEmailAndPassword(
-                          _emailController.text,
-                          _passwordController.text,
-                        );
+                        if (_isLogin) {
+                          // Connexion
+                          await Auth().loginWithEmailAndPassword(
+                            _emailController.text,
+                            _passwordController.text,
+                          );
+                        } else {
+                          // Inscription
+                          await Auth().createUserWithEmailAndPassword(
+                            _emailController.text,
+                            _passwordController.text,
+                          );
+                        }
                       } on FirebaseAuthException catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
-                            content: Text("${e.message}"),
+                            content: Text(e.message ?? "Une erreur est survenue"),
                             behavior: SnackBarBehavior.floating,
                             backgroundColor: Colors.red,
                           ),
                         );
                       }
+
+                      setState(() {
+                        _isLoading = false;
+                      });
                     }
                   },
-                  child: const Text("Login"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.blue.shade700,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                  ),
+                  child: _isLoading
+                      ? const CircularProgressIndicator(color: Colors.white)
+                      : Text(
+                    _isLogin ? "Se connecter" : "S'inscrire",
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // Lien pour basculer entre Connexion et Inscription
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Text(
+                    _isLogin
+                        ? "Vous n'avez pas de compte?  "
+                        : "Vous avez déjà un compte?  ",
+                  ),
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        _isLogin = !_isLogin; // Changement entre login et inscription
+                      });
+                    },
+                    child: Text(
+                      _isLogin ? "S'inscrire" : "Se connecter",
+                      style: TextStyle(
+                        color: Colors.blue.shade700,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
