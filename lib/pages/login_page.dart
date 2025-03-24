@@ -52,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
 
               // Titre de la page
               Text(
-                _isLogin ? "Connectez-vous pour continuer" : "Créer un compte",
+                _isLogin ? "SunuProjet" : "Créer un compte",
                 style: TextStyle(
                     fontSize: 22,
                     fontWeight: FontWeight.bold,
@@ -60,8 +60,8 @@ class _LoginPageState extends State<LoginPage> {
               ),
               Text(
                 _isLogin
-                    ? "Rejoignez SunuProjet pour gérer vos projets"
-                    : "Rejoignez SunuProjet pour démarrer",
+                    ? "Connectez-vous pour continuer"
+                    : "Rejoignez SunuProjet pour gerez vos projet",
                 style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
               ),
               const SizedBox(height: 30),
@@ -174,7 +174,7 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-                      // Implémenter la récupération de mot de passe
+
                     },
                     child: const Text("Mot de passe oublié ?"),
                   ),
@@ -253,7 +253,7 @@ class _LoginPageState extends State<LoginPage> {
                   GestureDetector(
                     onTap: () {
                       setState(() {
-                        _isLogin = !_isLogin; // Changement entre login et inscription
+                        _isLogin = !_isLogin;
                       });
                     },
                     child: Text(

@@ -1,42 +1,37 @@
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-import 'package:sunuprojetl3gl/services/firebase/auth.dart';
+import 'package:provider/provider.dart';
+import '../providers/auth_provider.dart';
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+/// Cette page affiche l’email de l’utilisateur connecté et propose un bouton pour se déconnecter.
+class MyHomePage extends StatelessWidget {
   final String title;
-
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
-
-class _MyHomePageState extends State<MyHomePage> {
-
-  final User? user = Auth().currentUser;
-
-
+  const MyHomePage({super.key, required this.title});
 
   @override
   Widget build(BuildContext context) {
+    // On récupère le provider pour accéder à l'utilisateur courant.
+    final authProvider = Provider.of<AuthProvider>(context);
+    final user = authProvider.user;
+
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        title: Text(widget.title),
+        title: Text(title),
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: <Widget>[
-        Text(user?.email ?? 'User email'),
-        const SizedBox(height: 20,),
-        ElevatedButton(onPressed: (){
-          Auth().logout();
-        }, child: const Text ("Logout") )
-
-        ],
+            Text(user?.email ?? 'Email non disponible'),
+            const SizedBox(height: 20),
+            ElevatedButton(
+              onPressed: () async {
+                await authProvider.logout();
+              },
+              child: const Text("Logout"),
+            ),
+          ],
+        ),
       ),
-     ),
     );
   }
 }

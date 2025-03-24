@@ -1,33 +1,26 @@
 import 'package:flutter/material.dart';
-import 'package:sunuprojetl3gl/services/firebase/auth.dart';
-import 'package:sunuprojetl3gl/pages/login_page.dart';
-import 'package:sunuprojetl3gl/pages/home_page.dart';
+import 'package:provider/provider.dart';
 import 'home_page.dart';
+import 'login_page.dart';
+import '../providers/auth_provider.dart';
 
-class RedirectionPage extends StatefulWidget {
+/// Cette page redirige l’utilisateur en fonction de son état d’authentification.
+/// - Si l'utilisateur est connecté, on affiche [MyHomePage].
+/// - Sinon, on affiche la page de connexion [LoginPage].
+class RedirectionPage extends StatelessWidget {
   const RedirectionPage({super.key});
 
   @override
-  State<StatefulWidget> createState() {
-    return _RedirectionPageState();
-  }
-}
-
-class _RedirectionPageState extends State<RedirectionPage> {
-  @override
   Widget build(BuildContext context) {
-    return StreamBuilder(
-      stream: Auth().authStateChanges,
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const CircularProgressIndicator();
-        } else if (snapshot.hasData) {
-          return const MyHomePage(title: "Home page");
+    // On utilise un Consumer pour écouter les changements d'état de l'authentification.
+    return Consumer<AuthProvider>(
+      builder: (context, authProvider, child) {
+        if (authProvider.user != null) {
+          return const MyHomePage(title: "Home Page");
         } else {
-          return const LoginPage (title: "Login Page");;
+          return const LoginPage(title: "Login Page");
         }
       },
     );
   }
 }
-
