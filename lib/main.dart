@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:sunuprojetl3gl/pages/redirection.dart';
+import 'package:sunuprojetl3gl/providers/project_provider.dart';
 import 'firebase_options.dart';
 import 'providers/auth_provider.dart';
 
@@ -15,9 +16,8 @@ Future<void> main() async {
   runApp(
     MultiProvider(
       providers: [
-        ChangeNotifierProvider<AuthProvider>(
-          create: (_) => AuthProvider(),
-        ),
+        ChangeNotifierProvider<AuthProvider>(create: (_) => AuthProvider()),
+        ChangeNotifierProvider<ProjectProvider>(create: (_) => ProjectProvider()),
       ],
       child: const MyApp(),
     ),

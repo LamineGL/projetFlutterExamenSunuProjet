@@ -20,6 +20,12 @@ class _LoginPageState extends State<LoginPage> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Valeur par défaut pour le rôle
+  String selectedRole = "Membre d'équipe";
+// Liste des rôles proposés
+  List<String> roles = ["Administrateur", "Chef de Projet", "Membre d'équipe"];
+
+
   bool _isLoading = false;
   bool _isLogin = true;
 
@@ -87,6 +93,26 @@ class _LoginPageState extends State<LoginPage> {
                       },
                     ),
                     const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      decoration: const InputDecoration(
+                        labelText: "Sélectionnez votre rôle",
+                        border: OutlineInputBorder(),
+                      ),
+                      items: roles.map((role) {
+                        return DropdownMenuItem(
+                          value: role,
+                          child: Text(role),
+                        );
+                      }).toList(),
+                      onChanged: (newValue) {
+                        setState(() {
+                          selectedRole = newValue!;
+                        });
+                      },
+                    ),
+                    const SizedBox(height: 20),
+
                   ],
                 ),
 
@@ -211,9 +237,11 @@ class _LoginPageState extends State<LoginPage> {
                           await Auth().createUserWithEmailAndPassword(
                             _emailController.text,
                             _passwordController.text,
-                            role: "membre",
+                            role: selectedRole,
                           );
+
                         }
+
                         ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text("Compte créé ! Veuillez vérifier votre email pour activer votre compte."),
