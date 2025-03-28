@@ -1,46 +1,57 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-
 class ProjectModel {
   String id;
   String title;
   String description;
-  String priority;
+  String createdBy;
   String status;
   DateTime startDate;
   DateTime endDate;
+  String priority;
+  List<String> members;
+  String adminId;
 
   ProjectModel({
     required this.id,
     required this.title,
     required this.description,
-    required this.priority,
+    required this.createdBy,
     required this.status,
     required this.startDate,
     required this.endDate,
+    required this.priority,
+    required this.members,
+    required this.adminId,
   });
 
-  // Convertir en JSON pour Firestore
+  // Convertir un projet en Map (pour Firestore)
   Map<String, dynamic> toMap() {
     return {
+      'id': id,
       'title': title,
       'description': description,
-      'priority': priority,
+      'createdBy': createdBy,
       'status': status,
-      'startDate': startDate,
-      'endDate': endDate,
+      'startDate': startDate.toIso8601String(),
+      'endDate': endDate.toIso8601String(),
+      'priority': priority,
+      'members': members,
+      'adminId': adminId,
     };
   }
 
-  // Convertir depuis Firestore
-  factory ProjectModel.fromMap(String id, Map<String, dynamic> map) {
+  // Créer un objet `ProjectModel` depuis Firestore
+  factory ProjectModel.fromMap(Map<String, dynamic> map, String documentId) {
     return ProjectModel(
-      id: id,
+      id: documentId,
       title: map['title'],
       description: map['description'],
-      priority: map['priority'],
+      createdBy: map['createdBy'],
       status: map['status'],
-      startDate: (map['startDate'] as Timestamp).toDate(),
-      endDate: (map['endDate'] as Timestamp).toDate(),
+      startDate: DateTime.parse(map['startDate']),
+      endDate: DateTime.parse(map['endDate']),
+      priority: map['priority'],
+      members: List<String>.from(map['members']),
+      adminId: map['adminId'],
     );
   }
 }

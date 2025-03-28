@@ -1,34 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/project_model.dart';
+import '../services/services_app/project_service.dart';
+
 
 class ProjectProvider extends ChangeNotifier {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final ProjectService _projectService = ProjectService();
   List<ProjectModel> _projects = [];
 
   List<ProjectModel> get projects => _projects;
 
-  // Charger les projets depuis Firestore
-  Future<void> fetchProjects() async {
-    final querySnapshot = await _firestore.collection('projects').get();
-    _projects = querySnapshot.docs
-        .map((doc) => ProjectModel.fromMap(doc.id, doc.data()))
-        .toList();
-    notifyListeners();
+  // Charger les projets de l'utilisateur
+  void fetchUserProjects(String userId) {
+    _projectService.getUserProjects(userId).listen((projects) {
+      _projects = projects;
+      notifyListeners();
+    });
   }
 
   // Ajouter un projet
   Future<void> addProject(ProjectModel project) async {
-    final docRef = await _firestore.collection('projects').add(project.toMap());
-    _projects.add(ProjectModel(
-      id: docRef.id,
-      title: project.title,
-      description: project.description,
-      priority: project.priority,
-      status: project.status,
-      startDate: project.startDate,
-      endDate: project.endDate,
-    ));
+    await _projectService.addProject(project);
+    fetchUserProjects(project.createdBy);
+  }
+
+  // Modifier un projet (ex: statut)
+  Future<void> updateProject(String projectId, Map<String, dynamic> data) async {
+    await _projectService.updateProject(projectId, data);
     notifyListeners();
   }
 }
