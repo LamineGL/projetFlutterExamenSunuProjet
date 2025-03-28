@@ -211,8 +211,15 @@ class _LoginPageState extends State<LoginPage> {
                           await Auth().createUserWithEmailAndPassword(
                             _emailController.text,
                             _passwordController.text,
+                            role: "membre",
                           );
                         }
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text("Compte créé ! Veuillez vérifier votre email pour activer votre compte."),
+                          ),
+                        );
+
                       } on FirebaseAuthException catch (e) {
                         ScaffoldMessenger.of(context).showSnackBar(
                           SnackBar(
