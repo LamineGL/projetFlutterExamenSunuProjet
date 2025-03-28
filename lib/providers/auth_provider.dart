@@ -5,7 +5,7 @@ import '../services/firebase/auth.dart';
 /// Ce provider gère l’état de l’authentification.
 /// Il utilise la classe [Auth] pour interagir avec Firebase et expose :
 /// - La propriété [user] qui représente l’utilisateur courant.
-/// - Des méthodes pour se connecter, se déconnecter et créer un utilisateur.
+
 class AuthProvider extends ChangeNotifier {
   final Auth _auth = Auth();
   User? _user;

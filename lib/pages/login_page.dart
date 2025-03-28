@@ -2,6 +2,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:sunuprojetl3gl/services/firebase/auth.dart';
 
+import 'forgot_password_page.dart';
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key, required this.title});
   final String title;
@@ -174,7 +176,10 @@ class _LoginPageState extends State<LoginPage> {
                   alignment: Alignment.centerRight,
                   child: TextButton(
                     onPressed: () {
-
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const ForgotPasswordPage()),
+                      );
                     },
                     child: const Text("Mot de passe oublié ?"),
                   ),

@@ -23,5 +23,15 @@ class Auth{
     await _firebaseAuth.createUserWithEmailAndPassword(email: email, password: password);
   }
 
+  // Methode pour la renitialisation
+  Future<void> resetPassword(String email) async {
+    try {
+      await _firebaseAuth.sendPasswordResetEmail(email: email);
+    } on FirebaseAuthException catch (e) {
+      
+      throw e;
+    }
+  }
+
 
 }
