@@ -33,7 +33,8 @@ class AuthProvider extends ChangeNotifier {
   }
 
   /// Méthode pour créer un nouvel utilisateur.
-  Future<void> createUser(String email, String password) async {
-    await _auth.createUserWithEmailAndPassword(email, password);
+  Future<void> createUser(String email, String password, String name, {String role = "membre"}) async {
+    await _auth.createUserWithEmailAndPassword(email, password, name: name, role: role);
   }
+
 }

@@ -25,7 +25,7 @@ class Auth{
 //   }
 
   /// Création d’un utilisateur avec email et mot de passe, en envoyant un email de vérification
-  Future<User?> createUserWithEmailAndPassword(String email, String password, {String role = "membre"}) async {
+  Future<User?> createUserWithEmailAndPassword(String email, String password, {String role = "membre",  required String name,}) async {
     try {
       // Création de l’utilisateur dans Firebase Auth
       UserCredential userCredential = await _firebaseAuth.createUserWithEmailAndPassword(
@@ -42,6 +42,7 @@ class Auth{
         await _firestore.collection('users').doc(user.uid).set({
           'email': email,
           'role': role,
+          'name': name,
           'createdAt': FieldValue.serverTimestamp(),
           'emailVerified': user.emailVerified,
         });

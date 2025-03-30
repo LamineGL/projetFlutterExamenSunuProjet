@@ -5,8 +5,8 @@ class ProjectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Ajouter un projet
-  Future<void> addProject(ProjectModel project) async {
-    await _firestore.collection('projects').doc(project.id).set(project.toMap());
+  Future<void> addProject(Map<String, dynamic> projectData) async {
+    await FirebaseFirestore.instance.collection('projects').add(projectData);
   }
 
   // Récupérer tous les projets d'un utilisateur
@@ -22,6 +22,36 @@ class ProjectService {
 
   // Modifier un projet (ex: changer le statut)
   Future<void> updateProject(String projectId, Map<String, dynamic> data) async {
-    await _firestore.collection('projects').doc(projectId).update(data);
+    await FirebaseFirestore.instance.collection('projects').doc(projectId).update(data);
   }
+
+  Future<List<ProjectModel>> getCreatedProjects(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('projects')
+        .where('createdBy', isEqualTo: userId)
+        .get();
+
+    return snapshot.docs.map((doc) => ProjectModel.fromMap(doc.data(), doc.id)).toList();
+  }
+
+
+  Future<List<ProjectModel>> getAdministeredProjects(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('projects')
+        .where('roles', arrayContains: {'uid': userId, 'role': 'Admin'})
+        .get();
+
+    return snapshot.docs.map((doc) => ProjectModel.fromMap(doc.data(), doc.id)).toList();
+  }
+
+
+  Future<List<ProjectModel>> getMemberProjects(String userId) async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('projects')
+        .where('members', arrayContains: userId)
+        .get();
+
+    return snapshot.docs.map((doc) => ProjectModel.fromMap(doc.data(), doc.id)).toList();
+  }
+
 }

@@ -49,6 +49,12 @@ class _ProjectPageState extends State<ProjectPage> {
 
     var uuid = Uuid();
     String projectId = uuid.v4();
+    List<ProjectRole> roles = [
+      ProjectRole(uid: user.uid, role: "Créateur (Chef de projet)")
+    ];
+
+
+    List<String> members = [user.uid];
 
     ProjectModel project = ProjectModel(
       id: projectId,
@@ -59,8 +65,9 @@ class _ProjectPageState extends State<ProjectPage> {
       startDate: _startDate!,
       endDate: _endDate!,
       priority: _priority,
-      members: [user.uid],
-      adminId: user.uid,
+      members: members,
+      roles: roles ,
+    adminId: user.uid,
     );
 
     try {
