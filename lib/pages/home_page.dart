@@ -7,6 +7,7 @@ import '../models/project_model.dart';
 import '../models/user_model.dart';
 import '../services/firebase/auth_service.dart';
 import '../services/services_app/project_service.dart';
+import 'notifications_page.dart';
 import 'project_page.dart';
 
 class MyHomePage extends StatefulWidget {
@@ -140,9 +141,13 @@ class _MyHomePageState extends State<MyHomePage> {
                 leading: const Icon(Icons.notifications),
                 title: const Text("Notifications"),
                 onTap: () {
-                  // Navigation vers les notifications
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const NotificationsPage()),
+                  );
                 },
               ),
+
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text("Se déconnecter"),

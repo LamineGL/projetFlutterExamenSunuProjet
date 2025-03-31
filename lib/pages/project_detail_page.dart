@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:sunuprojetl3gl/pages/task_management_page.dart';
 import '../models/project_model.dart';
 import '../models/user_model.dart';
 
@@ -31,7 +32,23 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         body: TabBarView(
           children: [
             _buildOverviewTab(),
-            Center(child: const Text("Tâches - À implémenter")),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => TaskManagementPage(
+                      projectId: widget.project.id,
+                      members: widget.project.members,
+                      projectDeadline: widget.project.endDate,
+                    ),
+                  ),
+                );
+              },
+              child: const Text('Gérer les tâches'),
+            ),
+
+
             _buildMembersTab(),
             Center(child: const Text("Fichiers - À implémenter")),
           ],

@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../models/project_model.dart';
+import '../../models/task_model.dart';
 
 class ProjectService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -53,5 +54,30 @@ class ProjectService {
 
     return snapshot.docs.map((doc) => ProjectModel.fromMap(doc.data(), doc.id)).toList();
   }
+
+  Future<void> updateProjectStatus(String projectId) async {
+    final tasksSnapshot = await FirebaseFirestore.instance.collection('projects').doc(projectId).collection('tasks').get();
+
+    final allTasks = tasksSnapshot.docs.map((doc) => TaskModel.fromMap(doc.data(), doc.id)).toList();
+    final allCompleted = allTasks.every((task) => task.status == 'Terminée');
+    final isOverdue = DateTime.now().isAfter(allTasks.map((task) => task.deadline).reduce((a, b) => a.isAfter(b) ? a : b));
+
+    if (allCompleted || isOverdue) {
+      await FirebaseFirestore.instance.collection('projects').doc(projectId).update({'status': 'Terminé'});
+    }
+  }
+  // Future<void> updateProjectStatus(String projectId) async {
+  //   final tasksSnapshot = await FirebaseFirestore.instance.collection('projects').doc(projectId).collection('tasks').get();
+  //
+  //   final allTasks = tasksSnapshot.docs.map((doc) => TaskModel.fromMap(doc.data(), doc.id)).toList();
+  //   final allCompleted = allTasks.every((task) => task.status == 'Terminée');
+  //   final isOverdue = DateTime.now().isAfter(allTasks.map((task) => task.deadline).reduce((a, b) => a.isAfter(b) ? a : b));
+  //
+  //   if (allCompleted || isOverdue) {
+  //     await FirebaseFirestore.instance.collection('projects').doc(projectId).update({'status': 'Terminé'});
+  //   }
+  // }
+
+
 
 }
