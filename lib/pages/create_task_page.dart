@@ -5,8 +5,8 @@ import '../models/task_model.dart';
 
 class CreateTaskPage extends StatefulWidget {
   final String projectId;
-  final List<String> members; // Liste des UID des membres
-  final DateTime projectDeadline; // Date limite du projet
+  final List<String> members;
+  final DateTime projectDeadline;
 
   const CreateTaskPage({
     Key? key,
@@ -28,12 +28,12 @@ class _CreateTaskPageState extends State<CreateTaskPage> {
   String? _selectedMember;
   String? _selectedPriority;
 
-  List<Map<String, String>> _memberDetails = []; // Liste contenant les informations des membres
+  List<Map<String, String>> _memberDetails = [];
 
   @override
   void initState() {
     super.initState();
-    _loadMemberDetails(); // Charger les détails des membres
+    _loadMemberDetails();
   }
 
   void _loadMemberDetails() async {

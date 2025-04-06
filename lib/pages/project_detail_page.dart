@@ -1,26 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:sunuprojetl3gl/pages/task_management_page.dart';
+
+// Import des modèles et services nécessaires
 import '../models/project_model.dart';
-import '../models/user_model.dart';
+import '../models/task_model.dart';
+import '../pages/create_task_page.dart';
+import '../services/services_app/task_service.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final ProjectModel project;
-  const ProjectDetailPage({super.key, required this.project});
+
+  const ProjectDetailPage({
+    Key? key,
+    required this.project,
+  }) : super(key: key);
 
   @override
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
 }
 
 class _ProjectDetailPageState extends State<ProjectDetailPage> {
+  User? currentUser; // Utilisateur connecté
+  bool isChefDeProjet = false;
+  bool isAdmin = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenToAuthState();
+  }
+
+  /// Écoute les changements d'état d'authentification Firebase
+  void _listenToAuthState() {
+    FirebaseAuth.instance.authStateChanges().listen((user) {
+      if (user != null) {
+        setState(() {
+          currentUser = user;
+        });
+        _checkRoles(user.uid);
+      } else {
+        setState(() {
+          currentUser = null;
+          isChefDeProjet = false;
+          isAdmin = false;
+        });
+      }
+    });
+  }
+
+  /// Vérifie les rôles dans le projet pour l'utilisateur actuel
+  Future<void> _checkRoles(String uid) async {
+    final project = widget.project;
+
+    // Vérification si l'utilisateur est le créateur du projet
+    setState(() {
+      isChefDeProjet = (project.createdBy == uid);
+    });
+
+    // Vérification si l'utilisateur est un administrateur
+    final adminRole = project.roles.firstWhere(
+          (role) => role.uid == uid && role.role == "Admin",
+      orElse: () => ProjectRole(uid: '', role: ''), // Valeur par défaut
+    );
+    setState(() {
+      isAdmin = (adminRole.role == "Admin");
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
       length: 4,
       child: Scaffold(
         appBar: AppBar(
-          title: Text(widget.project.title),
+          elevation: 2,
+          title: Text(
+            widget.project.title,
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           bottom: const TabBar(
+            indicatorColor: Colors.white,
             tabs: [
               Tab(text: "Aperçu"),
               Tab(text: "Tâches"),
@@ -32,65 +92,121 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
         body: TabBarView(
           children: [
             _buildOverviewTab(),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => TaskManagementPage(
-                      projectId: widget.project.id,
-                      members: widget.project.members,
-                      projectDeadline: widget.project.endDate,
-                    ),
-                  ),
-                );
-              },
-              child: const Text('Gérer les tâches'),
-            ),
-
-
+            _buildTasksTab(),
             _buildMembersTab(),
-            Center(child: const Text("Fichiers - À implémenter")),
+            _buildFilesTab(),
           ],
         ),
       ),
     );
   }
 
+  /// Onglet Aperçu
   Widget _buildOverviewTab() {
     final project = widget.project;
-    return Padding(
+    return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Statut : ${project.status}"),
-          Text("Description : ${project.description}"),
-          const SizedBox(height: 10),
-          _buildPriorityTag(project.priority),
-        ],
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        child: Padding(
+          padding: const EdgeInsets.all(20.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                "Description",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                project.description,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                "Statut",
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                project.status,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              const SizedBox(height: 16),
+              _buildPriorityTag(project.priority),
+            ],
+          ),
+        ),
       ),
     );
   }
 
+  /// Onglet Tâches
+  Widget _buildTasksTab() {
+    return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateTaskPage(
+                projectId: widget.project.id,
+                members: widget.project.members,
+                projectDeadline: widget.project.endDate,
+              ),
+            ),
+          ).then((_) => setState(() {}));
+        },
+        child: const Icon(Icons.add),
+      ),
+      body: FutureBuilder<List<TaskModel>>(
+        future: TaskService().getTasks(widget.project.id),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(child: Text('Erreur : ${snapshot.error}'));
+          } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+            return const Center(child: Text('Aucune tâche trouvée.'));
+          } else if (snapshot.hasData) {
+            final tasks = snapshot.data!;
+            return ListView.builder(
+              padding: const EdgeInsets.all(10),
+              itemCount: tasks.length,
+              itemBuilder: (context, index) {
+                final task = tasks[index];
+                return ListTile(
+                  title: Text(task.title),
+                  subtitle: Text('Priorité : ${task.priority}'),
+                );
+              },
+            );
+          } else {
+            return const Center(child: Text('Aucune donnée.'));
+          }
+        },
+      ),
+    );
+  }
+
+  /// Onglet Membres
   Widget _buildMembersTab() {
     final project = widget.project;
+
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                "Membres du projet",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20),
-              ),
-              IconButton(
-                onPressed: _showAddMembersDialog,
-                icon: const Icon(Icons.add, color: Colors.blue),
-              ),
+              const Text("Membres du Projet", style: TextStyle(fontSize: 18)),
+              if (isChefDeProjet || isAdmin)
+                ElevatedButton(
+                  onPressed: _showAddMembersDialog,
+                  child: const Icon(Icons.add),
+                ),
             ],
           ),
           const Divider(),
@@ -99,44 +215,21 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               itemCount: project.members.length,
               itemBuilder: (context, index) {
                 final memberUid = project.members[index];
-                final bool isCreator = project.createdBy == memberUid;
                 return FutureBuilder<DocumentSnapshot>(
-                  future: FirebaseFirestore.instance.collection('users').doc(memberUid).get(),
+                  future: FirebaseFirestore.instance
+                      .collection('users')
+                      .doc(memberUid)
+                      .get(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const ListTile(
-                        leading: CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.person, color: Colors.white)),
                         title: Text("Chargement..."),
                       );
                     }
-
                     final userData = snapshot.data!.data() as Map<String, dynamic>;
-                    final userName = userData['name'] ?? 'Nom inconnu';
-                    final userEmail = userData['email'] ?? 'Email inconnu';
-
-                    // Récupérer le rôle depuis Firestore
-                    String userRole = "Membre";
-                    if (widget.project.roles.isNotEmpty) {
-                      // Trouver le rôle correspondant à l'utilisateur
-                      final roleEntry = widget.project.roles.firstWhere(
-                            (role) => role.uid == memberUid, // Vérifiez si l'UID correspond
-                        orElse: () => ProjectRole(uid: memberUid, role: "Membre"), // Retourne "Membre" si aucun rôle trouvé
-                      );
-                      userRole = roleEntry.role; // Accéder à la propriété `role` de `ProjectRole`
-                    }
-
-
-                    return Card(
-                      margin: const EdgeInsets.symmetric(vertical: 5, horizontal: 10),
-                      child: ListTile(
-                        leading: CircleAvatar(backgroundColor: isCreator ? Colors.green : Colors.blue, child: Icon(Icons.person, color: Colors.white)),
-                        title: Text(userName),
-                        subtitle: Text(userEmail),
-                        trailing: Text(
-                          isCreator ? "Créateur (Chef de projet)" : userRole,
-                          style: TextStyle(color: isCreator ? Colors.green : Colors.black),
-                        ),
-                      ),
+                    return ListTile(
+                      title: Text(userData['name'] ?? 'Nom inconnu'),
+                      subtitle: Text(userData['email'] ?? 'Email inconnu'),
                     );
                   },
                 );
@@ -148,14 +241,27 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     );
   }
 
-  // **Formulaire pour ajouter des membres**
-  void _showAddMembersDialog() async {
-    final allUsers = await _fetchAllUsersFromFirestore();
-    final availableUsers = allUsers
-        .where((user) => !widget.project.members.contains(user.uid))
-        .toList();
+  Widget _buildFilesTab() {
+    return const Center(
+      child: Text("Fichiers - À implémenter"),
+    );
+  }
 
-    List<Map<String, dynamic>> selectedUsers = []; // uid + role
+  void _showAddMembersDialog() async {
+    final querySnapshot = await FirebaseFirestore.instance.collection('users').get();
+    final allUsers = querySnapshot.docs.map((doc) {
+      return {
+        "uid": doc.id,
+        "name": doc["name"] ?? "Nom inconnu",
+        "email": doc["email"] ?? "Email inconnu",
+      };
+    }).toList();
+
+    final availableUsers = allUsers.where((user) {
+      return !widget.project.members.contains(user["uid"]);
+    }).toList();
+
+    List<Map<String, String>> selectedUsers = [];
 
     showDialog(
       context: context,
@@ -165,48 +271,44 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           content: SingleChildScrollView(
             child: Column(
               children: availableUsers.map((user) {
-                String selectedRole = "Membre"; // Rôle par défaut
+                return StatefulBuilder(
+                  builder: (context, setState) {
+                    String selectedRole = "Membre";
 
-                return Row(
-                  children: [
-                    Expanded(
-                      child: ListTile(
-                        title: Text(user.name),
-                        subtitle: Text(user.email),
-                      ),
-                    ),
-                    DropdownButton<String>(
-                      value: selectedRole,
-                      items: const [
-                        DropdownMenuItem(
-                          value: "Admin",
-                          child: Text("Admin"),
+                    return Row(
+                      children: [
+                        Expanded(
+                          child: ListTile(
+                            title: Text(user["name"]),
+                            subtitle: Text(user["email"]),
+                          ),
                         ),
-                        DropdownMenuItem(
-                          value: "Membre",
-                          child: Text("Membre"),
+                        DropdownButton<String>(
+                          value: selectedRole,
+                          items: const [
+                            DropdownMenuItem(value: "Admin", child: Text("Admin")),
+                            DropdownMenuItem(value: "Membre", child: Text("Membre")),
+                          ],
+                          onChanged: (value) {
+                            setState(() {
+                              selectedRole = value!;
+                            });
+
+                            final existingIndex = selectedUsers.indexWhere(
+                                    (selected) => selected["uid"] == user["uid"]);
+                            if (existingIndex != -1) {
+                              selectedUsers[existingIndex]["role"] = selectedRole;
+                            } else {
+                              selectedUsers.add({
+                                "uid": user["uid"],
+                                "role": selectedRole,
+                              });
+                            }
+                          },
                         ),
                       ],
-                      onChanged: (value) {
-                        setState(() {
-                          selectedRole = value!;
-                        });
-
-                        final existingUserIndex = selectedUsers.indexWhere(
-                                (selectedUser) => selectedUser['uid'] == user.uid);
-
-                        if (existingUserIndex != -1) {
-                          selectedUsers[existingUserIndex]['role'] =
-                              selectedRole;
-                        } else {
-                          selectedUsers.add({
-                            'uid': user.uid,
-                            'role': selectedRole,
-                          });
-                        }
-                      },
-                    ),
-                  ],
+                    );
+                  },
                 );
               }).toList(),
             ),
@@ -217,8 +319,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
               child: const Text("Annuler"),
             ),
             TextButton(
-              onPressed: () {
-                _addSelectedMembers(selectedUsers);
+              onPressed: () async {
+                await _addSelectedMembers(selectedUsers);
                 Navigator.pop(context);
               },
               child: const Text("Ajouter"),
@@ -229,68 +331,72 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     );
   }
 
-  void _addSelectedMembers(List<Map<String, dynamic>> selectedUsers) async {
-    // Mettre à jour la liste des membres
+  Future<void> _addSelectedMembers(List<Map<String, String?>> selectedUsers) async {
+    // Copie des membres et rôles existants pour mise à jour
     final updatedMembers = List<String>.from(widget.project.members);
-
-    // Mettre à jour la liste des rôles
     final updatedRoles = List<ProjectRole>.from(widget.project.roles);
 
-    // Ajouter les nouveaux membres et leurs rôles
     for (var user in selectedUsers) {
-      updatedMembers.add(user['uid']);
-      updatedRoles.add(ProjectRole(uid: user['uid'], role: user['role']));
+      // Vérifie que les valeurs ne sont pas nulles
+      final String uid = user["uid"] ?? ""; // Retourne une chaîne vide si null
+      final String role = user["role"] ?? "Membre"; // Définit un rôle par défaut si null
+
+      // Ajoute uniquement si l'UID est valide
+      if (uid.isNotEmpty) {
+        updatedMembers.add(uid);
+        updatedRoles.add(ProjectRole(uid: uid, role: role));
+      }
     }
 
-    // Sauvegarder dans Firestore
-    await FirebaseFirestore.instance.collection('projects').doc(widget.project.id).update({
-      'members': updatedMembers,
-      'roles': updatedRoles.map((role) => role.toMap()).toList(),
+    // Met à jour le projet dans Firestore
+    await FirebaseFirestore.instance
+        .collection('projects')
+        .doc(widget.project.id)
+        .update({
+      "members": updatedMembers,
+      "roles": updatedRoles.map((role) => role.toMap()).toList(),
     });
 
-    // Mettre à jour l'état local
+    // Met à jour l'état local du projet
     setState(() {
-      widget.project.updateMembers = updatedMembers;
-      widget.project.updateRoles = updatedRoles;
+      widget.project.members = updatedMembers;
+      widget.project.roles = updatedRoles;
     });
+
+    // Affiche une notification de succès
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Membres ajoutés avec succès !")),
+    );
   }
 
 
 
-  }
-
-  Future<List<UserModel>> _fetchAllUsersFromFirestore() async {
-    final querySnapshot = await FirebaseFirestore.instance.collection('users').get();
-    return querySnapshot.docs.map((doc) {
-      return UserModel(
-        uid: doc.id,
-        name: doc['name'],
-        email: doc['email'],
-        role: doc['role'] ?? 'Membre',
-        isBlocked: doc['isBlocked'] ?? false,
-        emailVerified: doc['emailVerified'] ?? false,
-        projectsCreated: List<String>.from(doc['projectsCreated'] ?? []),
-        projectsJoined: List<String>.from(doc['projectsJoined'] ?? []),
-      );
-    }).toList();
-  }
 
   Widget _buildPriorityTag(String priority) {
     final color = _getPriorityColor(priority);
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
-      child: Text("Priorité: $priority", style: const TextStyle(color: Colors.white, fontSize: 12)),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration:
+      BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+      child: Text(
+        "Priorité : $priority",
+        style: const TextStyle(color: Colors.white, fontSize: 12),
+      ),
     );
   }
 
   Color _getPriorityColor(String priority) {
     switch (priority) {
-      case "Urgente": return Colors.red;
-      case "Haute": return Colors.orange;
-      case "Moyenne": return Colors.yellow;
-      case "Basse": return Colors.green;
-      default: return Colors.grey;
+      case "Urgente":
+        return Colors.red;
+      case "Haute":
+        return Colors.orange;
+      case "Moyenne":
+        return Colors.yellow[700]!;
+      case "Basse":
+        return Colors.green;
+      default:
+        return Colors.grey;
     }
   }
-
+}
