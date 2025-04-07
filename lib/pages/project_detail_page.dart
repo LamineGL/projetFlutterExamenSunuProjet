@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
+
 
 // Import des modèles et services nécessaires
 import '../models/project_model.dart';
@@ -12,7 +15,6 @@ import '../services/services_app/task_service.dart';
 class ProjectDetailPage extends StatefulWidget {
   final ProjectModel project;
 
-
   const ProjectDetailPage({
     Key? key,
     required this.project,
@@ -22,13 +24,13 @@ class ProjectDetailPage extends StatefulWidget {
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
 }
 
-class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTickerProviderStateMixin{
+class _ProjectDetailPageState extends State<ProjectDetailPage>
+    with SingleTickerProviderStateMixin {
   late TabController _tabController;
   User? currentUser; // Utilisateur connecté
   bool isChefDeProjet = false;
   bool isAdmin = false;
   String projectStatus = '';
-
 
   @override
   void initState() {
@@ -43,7 +45,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
 
     _listenToAuthState();
   }
-
 
   /// Écoute les changements d'état d'authentification Firebase
   void _listenToAuthState() {
@@ -111,16 +112,17 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
           _buildFilesTab(),
         ],
       ),
-      floatingActionButton: (isChefDeProjet || isAdmin) && _tabController.index == 1
+      floatingActionButton: (isChefDeProjet || isAdmin) &&
+          _tabController.index == 1
           ? FloatingActionButton(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => CreateTaskPage(
-                projectId: widget.project.id,       // Passage de l'ID du projet
-                members: widget.project.members,      // Passage de la liste des membres
-                projectDeadline: widget.project.endDate, // Passage de la date limite du projet (assurez-vous que cette propriété existe)
+                projectId: widget.project.id, // Passage de l'ID du projet
+                members: widget.project.members, // Passage de la liste des membres
+                projectDeadline: widget.project.endDate, // Date limite du projet
               ),
             ),
           );
@@ -131,65 +133,210 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
     );
   }
 
-  /// Onglet Aperçu
+  /// Onglet Aperçu - Nouvelle mise en page
   Widget _buildOverviewTab() {
     final project = widget.project;
+
+    // Conversion des dates (startDate et endDate sont déjà de type DateTime)
+    final String startDateString =
+    DateFormat('dd/MM/yyyy').format(project.startDate);
+    final String endDateString =
+    DateFormat('dd/MM/yyyy').format(project.endDate);
+
+    // Exemple de priorité (si présente dans votre modèle)
+    final String projectPriority = project.priority ?? "Non définie";
+
+    // Avancement fictif pour l'exemple (0% - à adapter selon vos données)
+    double projectProgress = 0.0;
+    String progressLabel = "${(projectProgress * 100).round()}%";
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
-      child: Card(
-        elevation: 4,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "Description",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              Text(project.description),
-              const SizedBox(height: 20),
-
-              // 👉 Ici tu insères tes boutons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Carte des détails du projet
+          Card(
+            elevation: 4,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ElevatedButton(
-                    onPressed: () => _updateProjectStatus("En cours"),
-                    child: const Text("En cours"),
+                  // Titre et badge du statut
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Expanded(
+                        child: Text(
+                          project.title,
+                          style: const TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: _statusColor(projectStatus),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          projectStatus,
+                          style: const TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: () => _updateProjectStatus("Terminés"),
-                    child: const Text("Terminés"),
+                  const SizedBox(height: 8),
+                  // Priorité
+                  Row(
+                    children: [
+                      const Text(
+                        "Priorité : ",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(
+                        projectPriority,
+                        style: const TextStyle(color: Colors.black87),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    onPressed: () => _updateProjectStatus("Annulé"),
-                    child: const Text("Annulé"),
+                  const SizedBox(height: 16),
+                  // Description
+                  Text(
+                    project.description,
+                    style: const TextStyle(fontSize: 14),
+                  ),
+                  const SizedBox(height: 20),
+                  // Dates
+                  Row(
+                    children: [
+                      const Text(
+                        "Dates : ",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text("Début : $startDateString  |  Fin : $endDateString"),
+                    ],
                   ),
                 ],
               ),
-
-              const SizedBox(height: 20),
-              Text(
-                "Détails",
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              const SizedBox(height: 8),
-              // ... autres détails du projet ici ...
-            ],
+            ),
           ),
+          const SizedBox(height: 16),
+          // Carte d'avancement et changement de statut
+          Card(
+            elevation: 4,
+            shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            child: Padding(
+              padding: const EdgeInsets.all(20.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Avancement du projet
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Avancement du projet",
+                        style: TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      Text(progressLabel),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  LinearProgressIndicator(
+                    value: projectProgress, // 0.0 = 0% ; 1.0 = 100%
+                    backgroundColor: Colors.grey[300],
+                    valueColor:
+                    const AlwaysStoppedAnimation<Color>(Colors.blue),
+                  ),
+                  const SizedBox(height: 20),
+                  // Changer le statut du projet
+                  const Text(
+                    "Changer le statut du projet",
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  const SizedBox(height: 10),
+                  // Ligne des 4 boutons de statut
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildStatusButton(
+                        label: "En attente",
+                        color: Colors.orange,
+                        onTap: () => _updateProjectStatus("En attente"),
+                      ),
+                      _buildStatusButton(
+                        label: "En cours",
+                        color: Colors.blue,
+                        onTap: () => _updateProjectStatus("En cours"),
+                      ),
+                      _buildStatusButton(
+                        label: "Terminés",
+                        color: Colors.green,
+                        onTap: () => _updateProjectStatus("Terminés"),
+                      ),
+                      _buildStatusButton(
+                        label: "Annulé",
+                        color: Colors.red,
+                        onTap: () => _updateProjectStatus("Annulé"),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Bouton statutaire (petit container coloré avec un label)
+  Widget _buildStatusButton({
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: color,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(color: Colors.white),
         ),
       ),
     );
   }
 
+  /// Détermine la couleur du badge de statut
+  Color _statusColor(String status) {
+    switch (status) {
+      case "En attente":
+        return Colors.orange;
+      case "En cours":
+        return Colors.blue;
+      case "Terminés":
+        return Colors.green;
+      case "Annulé":
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
 
-
-
-
-  /// Onglet Tâches
   /// Onglet Tâches
   Widget _buildTasksTab() {
     if (currentUser == null) {
@@ -255,7 +402,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
   void _updateProjectStatus(String newStatus) {
     if (isChefDeProjet || isAdmin) {
       ProjectService()
-          .updateProjectStatus(widget.project.id, newStatus: newStatus) // Passez le statut comme argument nommé
+          .updateProjectStatus(widget.project.id,
+          newStatus: newStatus) // Passez le statut comme argument nommé
           .then((_) {
         setState(() {
           projectStatus = newStatus;
@@ -270,11 +418,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Vous n'avez pas les permissions nécessaires.")),
+        const SnackBar(
+            content: Text("Vous n'avez pas les permissions nécessaires.")),
       );
     }
   }
-
 
   /// Onglet Membres
   Widget _buildMembersTab() {
@@ -312,7 +460,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
                         title: Text("Chargement..."),
                       );
                     }
-                    final userData = snapshot.data!.data() as Map<String, dynamic>;
+                    final userData =
+                    snapshot.data!.data() as Map<String, dynamic>;
                     return ListTile(
                       title: Text(userData['name'] ?? 'Nom inconnu'),
                       subtitle: Text(userData['email'] ?? 'Email inconnu'),
@@ -334,7 +483,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
   }
 
   void _showAddMembersDialog() async {
-    final querySnapshot = await FirebaseFirestore.instance.collection('users').get();
+    final querySnapshot =
+    await FirebaseFirestore.instance.collection('users').get();
     final allUsers = querySnapshot.docs.map((doc) {
       return {
         "uid": doc.id,
@@ -372,15 +522,18 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
                         DropdownButton<String>(
                           value: selectedRole,
                           items: const [
-                            DropdownMenuItem(value: "Admin", child: Text("Admin")),
-                            DropdownMenuItem(value: "Membre", child: Text("Membre")),
+                            DropdownMenuItem(
+                                value: "Admin", child: Text("Admin")),
+                            DropdownMenuItem(
+                                value: "Membre", child: Text("Membre")),
                           ],
                           onChanged: (value) {
                             setState(() {
                               selectedRole = value!;
                             });
                             final existingIndex = selectedUsers.indexWhere(
-                                  (selected) => selected["uid"] == user["uid"],
+                                  (selected) =>
+                              selected["uid"] == user["uid"],
                             );
                             if (existingIndex != -1) {
                               selectedUsers[existingIndex]["role"] = selectedRole;
@@ -417,7 +570,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
     );
   }
 
-  Future<void> _addSelectedMembers(List<Map<String, String>> selectedUsers) async {
+  Future<void> _addSelectedMembers(
+      List<Map<String, String>> selectedUsers) async {
     // Copie des membres et rôles existants pour mise à jour
     final updatedMembers = List<String>.from(widget.project.members);
     final updatedRoles = List<ProjectRole>.from(widget.project.roles);
@@ -453,7 +607,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
   }
 
   void _checkIfProjectCompleted() async {
-    final allTasksCompleted = await ProjectService().areAllTasksCompleted(widget.project.id);
+    final allTasksCompleted =
+    await ProjectService().areAllTasksCompleted(widget.project.id);
 
     if (allTasksCompleted) {
       ProjectService()
@@ -474,7 +629,16 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
     }
   }
 
+  Future<List<ProjectModel>> _getPendingProjects() async {
+    final snapshot = await FirebaseFirestore.instance
+        .collection('projects')
+        .where('status', isEqualTo: 'En attente')
+        .get();
 
+    return snapshot.docs
+        .map((doc) => ProjectModel.fromMap(doc.data(), doc.id))
+        .toList();
+  }
 
   Widget _buildPriorityTag(String priority) {
     final color = _getPriorityColor(priority);
@@ -488,10 +652,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTicker
       ),
     );
   }
-
-
-
-
 
   Color _getPriorityColor(String priority) {
     switch (priority) {

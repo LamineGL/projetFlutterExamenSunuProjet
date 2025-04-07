@@ -53,7 +53,6 @@ class _ProjectPageState extends State<ProjectPage> {
       ProjectRole(uid: user.uid, role: "Créateur (Chef de projet)")
     ];
 
-
     List<String> members = [user.uid];
 
     ProjectModel project = ProjectModel(
@@ -66,8 +65,8 @@ class _ProjectPageState extends State<ProjectPage> {
       endDate: _endDate!,
       priority: _priority,
       members: members,
-      roles: roles ,
-    adminId: user.uid,
+      roles: roles,
+      adminId: user.uid,
     );
 
     try {
@@ -108,30 +107,44 @@ class _ProjectPageState extends State<ProjectPage> {
             child: ListView(
               padding: const EdgeInsets.all(16.0),
               children: [
+                // Section : Titre du Projet
                 TextField(
                   controller: _titleController,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Titre du projet",
-                    border: OutlineInputBorder(),
+                    labelStyle: const TextStyle(fontSize: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
+
+                // Section : Description
                 TextField(
                   controller: _descriptionController,
-                  decoration: const InputDecoration(
+                  maxLines: 4,
+                  decoration: InputDecoration(
                     labelText: "Description",
-                    border: OutlineInputBorder(),
+                    labelStyle: const TextStyle(fontSize: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
+
+                // Section : Date de Début
                 ListTile(
+                  leading: const Icon(Icons.calendar_today, color: Colors.blue),
                   title: const Text("Date de début"),
                   subtitle: Text(
                     _startDate != null
                         ? _startDate!.toLocal().toString().split(' ')[0]
                         : "Sélectionnez une date",
+                    style: const TextStyle(fontSize: 16),
                   ),
-                  trailing: const Icon(Icons.calendar_today),
+                  trailing: const Icon(Icons.edit_calendar, color: Colors.grey),
                   onTap: () => _selectDate(context, (date) {
                     setState(() {
                       _startDate = date;
@@ -139,26 +152,35 @@ class _ProjectPageState extends State<ProjectPage> {
                   }),
                 ),
                 const SizedBox(height: 10),
+
+                // Section : Date de Fin
                 ListTile(
+                  leading: const Icon(Icons.calendar_today_outlined, color: Colors.blue),
                   title: const Text("Date de fin"),
                   subtitle: Text(
                     _endDate != null
                         ? _endDate!.toLocal().toString().split(' ')[0]
                         : "Sélectionnez une date",
+                    style: const TextStyle(fontSize: 16),
                   ),
-                  trailing: const Icon(Icons.calendar_today),
+                  trailing: const Icon(Icons.edit_calendar, color: Colors.grey),
                   onTap: () => _selectDate(context, (date) {
                     setState(() {
                       _endDate = date;
                     });
                   }),
                 ),
-                const SizedBox(height: 10),
+                const SizedBox(height: 20),
+
+                // Section : Priorité
                 DropdownButtonFormField<String>(
                   value: _priority,
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     labelText: "Priorité",
-                    border: OutlineInputBorder(),
+                    labelStyle: const TextStyle(fontSize: 18),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                   items: const [
                     DropdownMenuItem(value: "Basse", child: Text("Basse")),
@@ -175,17 +197,27 @@ class _ProjectPageState extends State<ProjectPage> {
               ],
             ),
           ),
-          ElevatedButton(
-            onPressed: _addProject,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
+
+          // Bouton : Créer le Projet
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: ElevatedButton(
+              onPressed: _addProject,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
               ),
-            ),
-            child: const Text(
-              "Créer le projet",
-              style: TextStyle(color: Colors.white),
+              child: const Text(
+                "Créer le projet",
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
             ),
           ),
         ],
