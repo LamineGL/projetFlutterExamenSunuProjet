@@ -6,10 +6,12 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../models/project_model.dart';
 import '../models/task_model.dart';
 import '../pages/create_task_page.dart';
+import '../services/services_app/project_service.dart';
 import '../services/services_app/task_service.dart';
 
 class ProjectDetailPage extends StatefulWidget {
   final ProjectModel project;
+
 
   const ProjectDetailPage({
     Key? key,
@@ -20,16 +22,28 @@ class ProjectDetailPage extends StatefulWidget {
   State<ProjectDetailPage> createState() => _ProjectDetailPageState();
 }
 
-class _ProjectDetailPageState extends State<ProjectDetailPage> {
+class _ProjectDetailPageState extends State<ProjectDetailPage> with SingleTickerProviderStateMixin{
+  late TabController _tabController;
   User? currentUser; // Utilisateur connecté
   bool isChefDeProjet = false;
   bool isAdmin = false;
+  String projectStatus = '';
+
 
   @override
   void initState() {
     super.initState();
+    _tabController = TabController(length: 4, vsync: this);
+    projectStatus = widget.project.status;
+
+    // Écoute les changements de tab pour redessiner le bouton
+    _tabController.addListener(() {
+      setState(() {}); // Obligatoire pour redessiner le FloatingActionButton
+    });
+
     _listenToAuthState();
   }
+
 
   /// Écoute les changements d'état d'authentification Firebase
   void _listenToAuthState() {
@@ -61,7 +75,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     // Vérification si l'utilisateur est un administrateur
     final adminRole = project.roles.firstWhere(
           (role) => role.uid == uid && role.role == "Admin",
-      orElse: () => ProjectRole(uid: '', role: ''), // Valeur par défaut
+      orElse: () => ProjectRole(uid: '', role: ''),
     );
     setState(() {
       isAdmin = (adminRole.role == "Admin");
@@ -70,34 +84,50 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 4,
-      child: Scaffold(
-        appBar: AppBar(
-          elevation: 2,
-          title: Text(
-            widget.project.title,
-            style: const TextStyle(fontWeight: FontWeight.bold),
-          ),
-          bottom: const TabBar(
-            indicatorColor: Colors.white,
-            tabs: [
-              Tab(text: "Aperçu"),
-              Tab(text: "Tâches"),
-              Tab(text: "Membres"),
-              Tab(text: "Fichiers"),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(
+        elevation: 2,
+        title: Text(
+          widget.project.title,
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        body: TabBarView(
-          children: [
-            _buildOverviewTab(),
-            _buildTasksTab(),
-            _buildMembersTab(),
-            _buildFilesTab(),
+        bottom: TabBar(
+          controller: _tabController,
+          indicatorColor: Colors.white,
+          tabs: const [
+            Tab(text: "Aperçu"),
+            Tab(text: "Tâches"),
+            Tab(text: "Membres"),
+            Tab(text: "Fichiers"),
           ],
         ),
       ),
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          _buildOverviewTab(),
+          _buildTasksTab(),
+          _buildMembersTab(),
+          _buildFilesTab(),
+        ],
+      ),
+      floatingActionButton: (isChefDeProjet || isAdmin) && _tabController.index == 1
+          ? FloatingActionButton(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => CreateTaskPage(
+                projectId: widget.project.id,       // Passage de l'ID du projet
+                members: widget.project.members,      // Passage de la liste des membres
+                projectDeadline: widget.project.endDate, // Passage de la date limite du projet (assurez-vous que cette propriété existe)
+              ),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      )
+          : null,
     );
   }
 
@@ -118,23 +148,36 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                 "Description",
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 6),
-              Text(
-                project.description,
-                style: Theme.of(context).textTheme.bodyMedium,
+              const SizedBox(height: 8),
+              Text(project.description),
+              const SizedBox(height: 20),
+
+              // 👉 Ici tu insères tes boutons
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton(
+                    onPressed: () => _updateProjectStatus("En cours"),
+                    child: const Text("En cours"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _updateProjectStatus("Terminés"),
+                    child: const Text("Terminés"),
+                  ),
+                  ElevatedButton(
+                    onPressed: () => _updateProjectStatus("Annulé"),
+                    child: const Text("Annulé"),
+                  ),
+                ],
               ),
-              const SizedBox(height: 16),
+
+              const SizedBox(height: 20),
               Text(
-                "Statut",
+                "Détails",
                 style: Theme.of(context).textTheme.titleMedium,
               ),
-              const SizedBox(height: 6),
-              Text(
-                project.status,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: 16),
-              _buildPriorityTag(project.priority),
+              const SizedBox(height: 8),
+              // ... autres détails du projet ici ...
             ],
           ),
         ),
@@ -142,53 +185,96 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     );
   }
 
+
+
+
+
+  /// Onglet Tâches
   /// Onglet Tâches
   Widget _buildTasksTab() {
-    return Scaffold(
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => CreateTaskPage(
-                projectId: widget.project.id,
-                members: widget.project.members,
-                projectDeadline: widget.project.endDate,
-              ),
-            ),
-          ).then((_) => setState(() {}));
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: FutureBuilder<List<TaskModel>>(
-        future: TaskService().getTasks(widget.project.id),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text('Erreur : ${snapshot.error}'));
-          } else if (snapshot.hasData && snapshot.data!.isEmpty) {
-            return const Center(child: Text('Aucune tâche trouvée.'));
-          } else if (snapshot.hasData) {
-            final tasks = snapshot.data!;
-            return ListView.builder(
-              padding: const EdgeInsets.all(10),
-              itemCount: tasks.length,
-              itemBuilder: (context, index) {
-                final task = tasks[index];
-                return ListTile(
+    if (currentUser == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    return FutureBuilder<List<TaskModel>>(
+      future: TaskService().getUserTasks(widget.project.id, currentUser!.uid),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Erreur : ${snapshot.error}'));
+        } else if (snapshot.hasData && snapshot.data!.isEmpty) {
+          return const Center(child: Text('Aucune tâche trouvée.'));
+        } else if (snapshot.hasData) {
+          final tasks = snapshot.data!;
+          return ListView.builder(
+            itemCount: tasks.length,
+            itemBuilder: (context, index) {
+              final task = tasks[index];
+              return Card(
+                child: ListTile(
                   title: Text(task.title),
-                  subtitle: Text('Priorité : ${task.priority}'),
-                );
-              },
-            );
-          } else {
-            return const Center(child: Text('Aucune donnée.'));
-          }
-        },
-      ),
+                  subtitle: Text("Priorité : ${task.priority}"),
+                  trailing: task.status != "Terminée"
+                      ? IconButton(
+                    icon: const Icon(Icons.check_circle,
+                        color: Colors.green),
+                    onPressed: () => _markTaskAsCompleted(task),
+                  )
+                      : const Icon(Icons.check_circle, color: Colors.grey),
+                ),
+              );
+            },
+          );
+        } else {
+          return const Center(child: Text('Aucune donnée.'));
+        }
+      },
     );
   }
+
+  void _markTaskAsCompleted(TaskModel task) {
+    TaskService()
+        .markTaskAsCompleted(widget.project.id, task.id)
+        .then((_) {
+      setState(() {
+        // Remplacer l'instance task par une nouvelle avec le statut mis à jour
+        task = task.copyWith(status: 'Terminée');
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Tâche marquée comme terminée !")),
+      );
+      _checkIfProjectCompleted(); // Vérifie si toutes les tâches sont terminées
+    }).catchError((e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erreur : $e")),
+      );
+    });
+  }
+
+  void _updateProjectStatus(String newStatus) {
+    if (isChefDeProjet || isAdmin) {
+      ProjectService()
+          .updateProjectStatus(widget.project.id, newStatus: newStatus) // Passez le statut comme argument nommé
+          .then((_) {
+        setState(() {
+          projectStatus = newStatus;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Statut du projet mis à jour : $newStatus")),
+        );
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur : $e")),
+        );
+      });
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Vous n'avez pas les permissions nécessaires.")),
+      );
+    }
+  }
+
 
   /// Onglet Membres
   Widget _buildMembersTab() {
@@ -271,10 +357,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
           content: SingleChildScrollView(
             child: Column(
               children: availableUsers.map((user) {
+                // Utilisation d'un StatefulBuilder pour gérer l'état du Dropdown
                 return StatefulBuilder(
                   builder: (context, setState) {
                     String selectedRole = "Membre";
-
                     return Row(
                       children: [
                         Expanded(
@@ -293,9 +379,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
                             setState(() {
                               selectedRole = value!;
                             });
-
                             final existingIndex = selectedUsers.indexWhere(
-                                    (selected) => selected["uid"] == user["uid"]);
+                                  (selected) => selected["uid"] == user["uid"],
+                            );
                             if (existingIndex != -1) {
                               selectedUsers[existingIndex]["role"] = selectedRole;
                             } else {
@@ -331,17 +417,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
     );
   }
 
-  Future<void> _addSelectedMembers(List<Map<String, String?>> selectedUsers) async {
+  Future<void> _addSelectedMembers(List<Map<String, String>> selectedUsers) async {
     // Copie des membres et rôles existants pour mise à jour
     final updatedMembers = List<String>.from(widget.project.members);
     final updatedRoles = List<ProjectRole>.from(widget.project.roles);
 
     for (var user in selectedUsers) {
-      // Vérifie que les valeurs ne sont pas nulles
-      final String uid = user["uid"] ?? ""; // Retourne une chaîne vide si null
-      final String role = user["role"] ?? "Membre"; // Définit un rôle par défaut si null
+      final String uid = user["uid"] ?? "";
+      final String role = user["role"] ?? "Membre";
 
-      // Ajoute uniquement si l'UID est valide
       if (uid.isNotEmpty) {
         updatedMembers.add(uid);
         updatedRoles.add(ProjectRole(uid: uid, role: role));
@@ -357,18 +441,38 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       "roles": updatedRoles.map((role) => role.toMap()).toList(),
     });
 
-    // Met à jour l'état local du projet
+    // Mise à jour de l'état local
     setState(() {
       widget.project.members = updatedMembers;
       widget.project.roles = updatedRoles;
     });
 
-    // Affiche une notification de succès
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Membres ajoutés avec succès !")),
     );
   }
 
+  void _checkIfProjectCompleted() async {
+    final allTasksCompleted = await ProjectService().areAllTasksCompleted(widget.project.id);
+
+    if (allTasksCompleted) {
+      ProjectService()
+          .upProjectStatus(widget.project.id, 'Terminés')
+          .then((_) {
+        setState(() {
+          // Mise à jour du statut local
+          projectStatus = 'Terminés';
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Le projet est maintenant terminé !")),
+        );
+      }).catchError((e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Erreur : $e")),
+        );
+      });
+    }
+  }
 
 
 
@@ -384,6 +488,10 @@ class _ProjectDetailPageState extends State<ProjectDetailPage> {
       ),
     );
   }
+
+
+
+
 
   Color _getPriorityColor(String priority) {
     switch (priority) {

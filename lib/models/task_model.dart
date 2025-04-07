@@ -17,6 +17,27 @@ class TaskModel {
     required this.deadline,
   });
 
+  // Méthode copyWith pour créer une nouvelle instance avec des champs mis à jour
+  TaskModel copyWith({
+    String? id,
+    String? title,
+    String? description,
+    String? assignedTo,
+    String? priority,
+    String? status,
+    DateTime? deadline,
+  }) {
+    return TaskModel(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      assignedTo: assignedTo ?? this.assignedTo,
+      priority: priority ?? this.priority,
+      status: status ?? this.status,
+      deadline: deadline ?? this.deadline,
+    );
+  }
+
   // Convertir en Map pour Firestore
   Map<String, dynamic> toMap() {
     return {
