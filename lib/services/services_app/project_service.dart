@@ -80,25 +80,18 @@ class ProjectService {
     return snapshot.docs.map((doc) => ProjectModel.fromMap(doc.data(), doc.id)).toList();
   }
 
-  Future<void> updateProjectStatus(String projectId, {String? newStatus}) async {
-    if (newStatus != null) {
-      // Mettre à jour directement avec le statut fourni
-      await _firestore.collection('projects').doc(projectId).update({
-        'status': newStatus,
-      });
-    } else {
-      // Vérification automatique des tâches pour définir le statut
-      final tasksSnapshot = await _firestore.collection('projects').doc(projectId).collection('tasks').get();
+  Future<void> updateProjectStatus(String projectId, {String? newStatus, double? newProgress}) async {
+    final updateData = <String, dynamic>{};
+    if (newStatus != null) updateData['status'] = newStatus;
+    if (newProgress != null) updateData['progress'] = newProgress;
 
-      final allTasks = tasksSnapshot.docs.map((doc) => TaskModel.fromMap(doc.data(), doc.id)).toList();
-      final allCompleted = allTasks.every((task) => task.status == 'Terminée');
-      final isOverdue = DateTime.now().isAfter(allTasks.map((task) => task.deadline).reduce((a, b) => a.isAfter(b) ? a : b));
-
-      if (allCompleted || isOverdue) {
-        await _firestore.collection('projects').doc(projectId).update({'status': 'Terminé'});
-      }
+    try {
+      await _firestore.collection('projects').doc(projectId).update(updateData);
+    } catch (e) {
+      throw Exception("Erreur lors de la mise à jour du projet : $e");
     }
   }
+
 
 // Future<void> updateProjectStatus(String projectId) async {
   //   final tasksSnapshot = await FirebaseFirestore.instance.collection('projects').doc(projectId).collection('tasks').get();

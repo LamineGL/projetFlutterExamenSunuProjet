@@ -11,10 +11,10 @@ class AuthProvider extends ChangeNotifier {
   User? _user;
 
   AuthProvider() {
-    // On s'abonne aux changements d'état de Firebase.
+
     _auth.authStateChanges.listen((User? user) {
       _user = user;
-      // On notifie l'UI pour qu'elle se mette à jour en cas de changement.
+
       notifyListeners();
     });
   }

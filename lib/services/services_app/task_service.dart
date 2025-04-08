@@ -32,10 +32,30 @@ class TaskService {
           .collection('tasks')
           .doc(taskId)
           .update({'status': 'Terminée'});
+
+      // Recalculer la progression du projet
+      final tasksSnapshot = await _firestore
+          .collection('projects')
+          .doc(projectId)
+          .collection('tasks')
+          .get();
+
+      final totalTasks = tasksSnapshot.docs.length;
+      final completedTasks = tasksSnapshot.docs
+          .where((doc) => doc['status'] == 'Terminée')
+          .length;
+
+      final newProgress = (completedTasks / totalTasks) * 100;
+
+      // Mettre à jour la progression du projet
+      await _firestore.collection('projects').doc(projectId).update({
+        'progress': newProgress,
+      });
     } catch (e) {
       throw Exception("Erreur lors de la mise à jour de la tâche : $e");
     }
   }
+
 
   Future<List<TaskModel>> getUserTasks(String projectId, String userId) async {
     final querySnapshot = await _firestore

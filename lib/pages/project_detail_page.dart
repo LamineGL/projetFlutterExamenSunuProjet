@@ -2,10 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
-
-
-
-// Import des modèles et services nécessaires
 import '../models/project_model.dart';
 import '../models/task_model.dart';
 import '../pages/create_task_page.dart';
@@ -146,9 +142,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     // Exemple de priorité (si présente dans votre modèle)
     final String projectPriority = project.priority ?? "Non définie";
 
-    // Avancement fictif pour l'exemple (0% - à adapter selon vos données)
-    double projectProgress = 0.0;
-    String progressLabel = "${(projectProgress * 100).round()}%";
+    double projectProgress = widget.project.progress / 100; // Utilise les données du modèle
+    String progressLabel = "${widget.project.progress.round()}%";
+
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -607,16 +603,15 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   void _checkIfProjectCompleted() async {
-    final allTasksCompleted =
-    await ProjectService().areAllTasksCompleted(widget.project.id);
+    final allTasksCompleted = await ProjectService().areAllTasksCompleted(widget.project.id);
 
     if (allTasksCompleted) {
       ProjectService()
-          .upProjectStatus(widget.project.id, 'Terminés')
+          .updateProjectStatus(widget.project.id, newStatus: 'Terminés', newProgress: 100)
           .then((_) {
         setState(() {
-          // Mise à jour du statut local
           projectStatus = 'Terminés';
+          widget.project.progress = 100; // Mise à jour locale
         });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Le projet est maintenant terminé !")),
@@ -628,6 +623,8 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       });
     }
   }
+
+
 
   Future<List<ProjectModel>> _getPendingProjects() async {
     final snapshot = await FirebaseFirestore.instance

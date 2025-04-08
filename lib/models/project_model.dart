@@ -10,6 +10,7 @@ class ProjectModel {
   List<String> members;
   List<ProjectRole> roles;
   String adminId;
+  double progress;
 
 
   ProjectModel({
@@ -24,6 +25,7 @@ class ProjectModel {
     required this.members,
     required this.roles,
     required this.adminId,
+    this.progress = 0.0,
   });
 
   // Convertir un projet en Map (pour Firestore)
@@ -40,6 +42,7 @@ class ProjectModel {
       'members': members,
       'roles': roles.map((role) => role.toMap()).toList(),
       'adminId': adminId,
+      'progress': progress
     };
   }
 
@@ -59,6 +62,7 @@ class ProjectModel {
           ?.map((role) => ProjectRole.fromMap(role as Map<String, dynamic>))
           .toList() ?? [],
       adminId: map['adminId'],
+      progress: map['progress']?.toDouble() ?? 0.0,
     );
   }
 

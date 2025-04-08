@@ -33,7 +33,6 @@ class _MyHomePageState extends State<MyHomePage> {
     _loadUserProjects();
   }
 
-  // Charger les informations de l'utilisateur connecté
   void _loadUserData() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -46,7 +45,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Charger les projets de l'utilisateur
   void _loadUserProjects() async {
     User? user = FirebaseAuth.instance.currentUser;
     if (user != null) {
@@ -64,7 +62,6 @@ class _MyHomePageState extends State<MyHomePage> {
     }
   }
 
-  // Combine les projets en éliminant les doublons (on se base sur l'id)
   List<ProjectModel> get _allProjects {
     final Map<String, ProjectModel> mapProjects = {};
     for (var p in _createdProjects) {
@@ -79,9 +76,31 @@ class _MyHomePageState extends State<MyHomePage> {
     return mapProjects.values.toList();
   }
 
+  void refreshProjects() async {
+    User? user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      final createdProjects = await ProjectService().getCreatedProjects(user.uid);
+      final administeredProjects = await ProjectService().getAdministeredProjects(user.uid);
+      final memberProjects = await ProjectService().getMemberProjects(user.uid);
+
+      if (mounted) {
+        setState(() {
+          _createdProjects = createdProjects;
+          _administeredProjects = administeredProjects;
+          _memberProjects = memberProjects;
+        });
+      }
+    }
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    refreshProjects();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // Filtrer les projets selon leur statut à partir de la liste combinée
     final allProjects = _allProjects;
     final enAttente = allProjects.where((project) => project.status == "En attente").toList();
     final enCours = allProjects.where((project) => project.status == "En cours").toList();
@@ -89,7 +108,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final annules = allProjects.where((project) => project.status == "Annulés").toList();
 
     return DefaultTabController(
-      length: 4, // Quatre onglets selon le statut
+      length: 4,
       child: Scaffold(
         appBar: AppBar(
           title: Text(widget.title),
@@ -107,7 +126,7 @@ class _MyHomePageState extends State<MyHomePage> {
         drawer: Drawer(
           child: ListView(
             padding: EdgeInsets.zero,
-            children: <Widget>[
+            children: [
               DrawerHeader(
                 decoration: const BoxDecoration(color: Colors.blue),
                 child: Column(
@@ -133,9 +152,7 @@ class _MyHomePageState extends State<MyHomePage> {
               ListTile(
                 leading: const Icon(Icons.person),
                 title: const Text("Voir Profil"),
-                onTap: () {
-                  // Navigation vers le profil
-                },
+                onTap: () {},
               ),
               ListTile(
                 leading: const Icon(Icons.notifications),
@@ -147,7 +164,6 @@ class _MyHomePageState extends State<MyHomePage> {
                   );
                 },
               ),
-
               ListTile(
                 leading: const Icon(Icons.logout),
                 title: const Text("Se déconnecter"),
@@ -170,21 +186,27 @@ class _MyHomePageState extends State<MyHomePage> {
             _buildProjectList(annules),
           ],
         ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ProjectPage()),
-            );
+        floatingActionButton: Builder(
+          builder: (context) {
+            final tabIndex = DefaultTabController.of(context)?.index ?? 0;
+            return tabIndex != 2
+                ? FloatingActionButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const ProjectPage()),
+                );
+              },
+              backgroundColor: Colors.blue,
+              child: const Icon(Icons.add),
+            )
+                : const SizedBox.shrink();
           },
-          backgroundColor: Colors.blue,
-          child: const Icon(Icons.add),
         ),
       ),
     );
   }
 
-  // Méthode d'affichage de la liste des projets
   Widget _buildProjectList(List<ProjectModel> projects) {
     if (projects.isEmpty) {
       return const Center(
@@ -261,8 +283,8 @@ class _MyHomePageState extends State<MyHomePage> {
                         ),
                       ),
                       const SizedBox(width: 10),
-                      const Text("0% terminé",
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                      Text("${project.progress.round()}% terminé",
+                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ],
                   ),
                   const SizedBox(height: 10),
