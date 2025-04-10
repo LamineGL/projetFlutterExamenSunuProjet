@@ -23,7 +23,7 @@ class ProjectDetailPage extends StatefulWidget {
 class _ProjectDetailPageState extends State<ProjectDetailPage>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
-  User? currentUser; // Utilisateur connecté
+  User? currentUser;
   bool isChefDeProjet = false;
   bool isAdmin = false;
   String projectStatus = '';
@@ -116,9 +116,9 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             context,
             MaterialPageRoute(
               builder: (context) => CreateTaskPage(
-                projectId: widget.project.id, // Passage de l'ID du projet
-                members: widget.project.members, // Passage de la liste des membres
-                projectDeadline: widget.project.endDate, // Date limite du projet
+                projectId: widget.project.id,
+                members: widget.project.members,
+                projectDeadline: widget.project.endDate,
               ),
             ),
           );
@@ -144,7 +144,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
 
     double projectProgress = widget.project.progress / 100; // Utilise les données du modèle
     String progressLabel = "${widget.project.progress.round()}%";
-
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16.0),
@@ -420,18 +419,23 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
     }
   }
 
-  /// Onglet Membres
+  /// Onglet Membres - Design amélioré
   Widget _buildMembersTab() {
     final project = widget.project;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Entête avec titre et bouton Ajouter (pour chef de projet ou Admin)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Membres du Projet", style: TextStyle(fontSize: 18)),
+              const Text(
+                "Membres du Projet",
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               if (isChefDeProjet || isAdmin)
                 ElevatedButton(
                   onPressed: _showAddMembersDialog,
@@ -440,6 +444,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
             ],
           ),
           const Divider(),
+          // Liste des membres affichés dans une carte avec avatar et rôle
           Expanded(
             child: ListView.builder(
               itemCount: project.members.length,
@@ -452,15 +457,72 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
                       .get(),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
-                      return const ListTile(
-                        title: Text("Chargement..."),
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 12.0),
+                        child: Center(child: CircularProgressIndicator()),
                       );
                     }
                     final userData =
                     snapshot.data!.data() as Map<String, dynamic>;
-                    return ListTile(
-                      title: Text(userData['name'] ?? 'Nom inconnu'),
-                      subtitle: Text(userData['email'] ?? 'Email inconnu'),
+                    final String memberName =
+                        userData['name'] ?? 'Nom inconnu';
+                    final String memberEmail =
+                        userData['email'] ?? 'Email inconnu';
+
+                    // Recherche du rôle associé à ce membre dans le projet
+                    final roleData = widget.project.roles.firstWhere(
+                          (role) => role.uid == memberUid,
+                      orElse: () => ProjectRole(uid: memberUid, role: 'Membre'),
+                    );
+                    final String memberRole = roleData.role;
+
+                    return Card(
+                      elevation: 4,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      margin: const EdgeInsets.symmetric(vertical: 8),
+                      child: ListTile(
+                        contentPadding: const EdgeInsets.all(12),
+                        leading: CircleAvatar(
+                          backgroundColor: Colors.blue[300],
+                          child: Text(
+                            memberName.substring(0, 1).toUpperCase(),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        ),
+                        title: Text(
+                          memberName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                          ),
+                        ),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(memberEmail),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: memberRole == "Admin"
+                                    ? Colors.orange
+                                    : Colors.grey[400],
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Text(
+                                memberRole,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
                     );
                   },
                 );
@@ -603,11 +665,13 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   }
 
   void _checkIfProjectCompleted() async {
-    final allTasksCompleted = await ProjectService().areAllTasksCompleted(widget.project.id);
+    final allTasksCompleted =
+    await ProjectService().areAllTasksCompleted(widget.project.id);
 
     if (allTasksCompleted) {
       ProjectService()
-          .updateProjectStatus(widget.project.id, newStatus: 'Terminés', newProgress: 100)
+          .updateProjectStatus(widget.project.id,
+          newStatus: 'Terminés', newProgress: 100)
           .then((_) {
         setState(() {
           projectStatus = 'Terminés';
@@ -623,8 +687,6 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       });
     }
   }
-
-
 
   Future<List<ProjectModel>> _getPendingProjects() async {
     final snapshot = await FirebaseFirestore.instance
