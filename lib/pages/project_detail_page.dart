@@ -397,8 +397,7 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
   void _updateProjectStatus(String newStatus) {
     if (isChefDeProjet || isAdmin) {
       ProjectService()
-          .updateProjectStatus(widget.project.id,
-          newStatus: newStatus) // Passez le statut comme argument nommé
+          .updateProjectStatus(widget.project.id, newStatus: newStatus)
           .then((_) {
         setState(() {
           projectStatus = newStatus;
@@ -413,11 +412,11 @@ class _ProjectDetailPageState extends State<ProjectDetailPage>
       });
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text("Vous n'avez pas les permissions nécessaires.")),
+        const SnackBar(content: Text("Vous n'avez pas les permissions nécessaires.")),
       );
     }
   }
+
 
   /// Onglet Membres - Design amélioré
   Widget _buildMembersTab() {

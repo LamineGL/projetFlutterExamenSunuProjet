@@ -105,7 +105,7 @@ class _MyHomePageState extends State<MyHomePage> {
     final enAttente = allProjects.where((project) => project.status == "En attente").toList();
     final enCours = allProjects.where((project) => project.status == "En cours").toList();
     final termines = allProjects.where((project) => project.status == "Terminés").toList();
-    final annules = allProjects.where((project) => project.status == "Annulés").toList();
+    final annules = allProjects.where((project) => project.status == "Annulé").toList();
 
     return DefaultTabController(
       length: 4,
